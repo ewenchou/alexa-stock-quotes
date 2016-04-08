@@ -1,0 +1,5 @@
+GetStocksIntent get my stocks
+GetStocksIntent get stocks
+GetStocksIntent how are my stocks
+GetStocksIntent lookup stocks
+GetStocksIntent lookup my stocks
