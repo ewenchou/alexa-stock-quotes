@@ -82,7 +82,7 @@ def on_session_ended(session_ended_request, session):
 
 # --------------- Functions that control the skill's behavior ------------------
 
-def get_quotes(intent, session, tickers=TICKERS):
+def get_quotes(tickers=TICKERS):
     """Get stock quotes using `googlefinance` Python module.
 
     @param: tickers: Dict with ticker symbol as key, and company name as value.
@@ -124,7 +124,7 @@ def get_quotes(intent, session, tickers=TICKERS):
         return error_response()
 
     card_title = "Stock Report"
-    session_attributes = session.get("attributes", {})
+    session_attributes = {}
     should_end_session = True
     reprompt_text = None
 
