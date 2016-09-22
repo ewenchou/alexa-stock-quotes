@@ -4,10 +4,32 @@ A simple Alexa skill that reads stock quotes for a predefined list of ticker sym
 
 ## Setup
 
-1. Clone this repository
-2. Customize the `STOCK_TICKERS` and `APP_ID` variables in `lambda_function.py`
-3. Copy/Paste `lambda_function.py` or upload as a zip file to your AWS Lambda function.
-4. Configure your Alexa skill in the Amazon developer portal.
-5. Test the skill by launching it with your invocation name. For example, "Alexa, open Stock Report".
+For more information on how to setup your AWS Lambda function and Alexa Skill, visit my [blog post](https://ewenchou.github.io/blog/2016/04/08/asking-for-stocks/).
 
-You can read more about it on my [blog](https://ewenchou.github.io/blog/2016/04/08/asking-for-stocks/)
+1. Clone this repository
+
+        git clone https://github.com/ewenchou/alexa-stock-quotes.git
+
+2. Customize the `TICKERS` and `APP_ID` variables in `lambda_function.py`
+
+3. Install requirements in local directory:
+
+        pip install -r requirements.txt -t .
+
+4. Create a zip file with the following contents:
+
+        googlefinance
+        googlefinance-<version>.dist-info
+        lambda_function.py
+
+5. Configure your Alexa skill in the Amazon developer portal.
+
+6. Test the skill by launching it with your invocation name. For example, "Alexa, open Stock Report".
+
+## Testing
+
+There is a simple test script that you can run after you've done Steps 1 to 3 above.
+
+        python test.py
+
+*Note: Tested using Python 2.7.12 on Ubuntu and `googlefinance` version 0.7*

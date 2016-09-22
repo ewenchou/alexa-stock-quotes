@@ -2,14 +2,14 @@
 This is a simple Alexa Skill that gets the stock quotes for a list of tickers.
 """
 from __future__ import print_function
-from math import floor
-import urllib2
-import json
-import decimal
+from googlefinance import getQuotes
 
-# Customize with your list of stock tickers
-STOCK_TICKERS = ['AAPL', 'FB', 'NFLX']
-
+# Customize with your stock tickers
+TICKERS = {
+    "AAPL": "Apple",
+    "FB": "Facebook",
+    "NFLX": "Netflix"
+}
 # Populate with your skill's application ID to prevent someone else from
 # configuring a skill that sends requests to this function.
 APP_ID = ""
@@ -52,7 +52,7 @@ def on_launch(launch_request, session):
     print("on_launch requestId=" + launch_request['requestId'] +
           ", sessionId=" + session['sessionId'])
     # Dispatch to your skill's launch
-    return get_stocks()
+    return get_quotes()
 
 
 def on_intent(intent_request, session):
@@ -66,7 +66,7 @@ def on_intent(intent_request, session):
 
     # Dispatch to your skill's intent handlers
     if intent_name == "GetStocksIntent":
-        return get_stocks()
+        return get_quotes()
     else:
         raise ValueError("Invalid intent")
 
@@ -82,78 +82,57 @@ def on_session_ended(session_ended_request, session):
 
 # --------------- Functions that control the skill's behavior ------------------
 
-def get_url(ticker_list=STOCK_TICKERS):
-    tickers = ",".join(ticker_list)
-    return "http://finance.yahoo.com/webservice/v1/symbols/{tickers}/" \
-           "quote?format=json&view=detail".format(tickers=tickers)
+def get_quotes(intent, session, tickers=TICKERS):
+    """Get stock quotes using `googlefinance` Python module.
 
-def parse_data(data):
-    resources = data['list']['resources']
-    stocks = []
-    for r in resources:
-        # Parse the name and remove the unnecessary bits
-        name = r['resource']['fields']['name']
-        name = name.replace("Common Stock", '')
-        name = name.replace(' Inc','').replace(',','').replace('.','')
-        name = name.replace('(NS) O','')
-        name = name.replace("(The) Commo", "")
-        name = name.strip()
+    @param: tickers: Dict with ticker symbol as key, and company name as value.
 
-        # Parse the change percent and make it speech-friendly
-        change = r['resource']['fields']['chg_percent']  # this is a string
-        if "-" in change:
-            up_down = "is down"
-        else:
-            up_down = "is up"
-        # Convert to decimal, get absolute value, and round to one decimal place
-        change = round(abs(decimal.Decimal(change)), 1)
-        if change == 0:
-            spoken_change = "is trading at"
-        else:
-            # Avoid saying things like, "two point zero percent".
-            # Instead, say "two percent"
-            splits = str(change).split('.')
-            if splits[1] == '0':
-                spoken_change = "{up_down} {change}% at".format(
-                    up_down=up_down, change=splits[0])
-            else:
-                spoken_change = "{up_down} {change}% at".format(
-                    up_down=up_down, change=change)
-
-        # Parse the price and make it speech-friendly
-        price = round(decimal.Decimal(r['resource']['fields']['price']), 2)
-        price = round(decimal.Decimal(price), 2)
-        spoken_price = "${}".format(price)
-
-        # Put all the pieces together
-        spoken = "{name} {change} {price}.".format(
-            name=name, change=spoken_change, price=spoken_price)
-
-        # Append to the list of stocks
-        stocks.append(spoken)
-    return "  ".join(stocks)
-
-
-def get_stocks(ticker_list=STOCK_TICKERS):
-    card_title = "Stock Report"
-    session_attributes = {}
-    should_end_session = True
-    try:
-        url = get_url(ticker_list)
-        res = urllib2.urlopen(url)
-        data = json.loads(res.read())
-        stocks = parse_data(data)
-
-        if stocks:
-            speech_output = "Here's how your stocks are doing, " + stocks
-            reprompt_text = None
-            return build_response(session_attributes, build_speechlet_response(
-                card_title, speech_output, reprompt_text, should_end_session))
-        else:
-            return error_response()
-    except Exception as e:
-        print("Exception: {}".format(str(e)))
+    Example output from googlefinance.getQuotes()
+        [
+            {
+                "Index": "NASDAQ", 
+                "LastTradeWithCurrency": "114.65", 
+                "LastTradeDateTime": "2016-09-22T14:00:40Z", 
+                "LastTradePrice": "114.65", 
+                "LastTradeTime": "2:00PM EDT", 
+                "LastTradeDateTimeLong": "Sep 22, 2:00PM EDT", 
+                "StockSymbol": "AAPL", 
+                "ID": "22144"
+            }, 
+            ...
+        ]
+    """
+    if not tickers:
         return error_response()
+
+    try:
+        # Get the quotes
+        quote_list = getQuotes(tickers.keys())
+        # Parse the quotes and build a list of phrases
+        quote_phrases = []
+        for quote in quote_list:
+            symbol = quote['StockSymbol']
+            price = quote['LastTradePrice']
+            name = tickers[symbol]
+            quote_phrases.append("{name} is trading at ${price}".format(
+                name=name, price=price))
+        # Build the speech output sentence
+        speech_output = "Here's how your stocks are doing, {}.".format(
+            ", ".join(quote_phrases))
+    except Exception as e:
+        print("Failed to get quotes: {}".format(str(e)))
+        return error_response()
+
+    card_title = "Stock Report"
+    session_attributes = session.get("attributes", {})
+    should_end_session = True
+    reprompt_text = None
+
+    return build_response(
+        session_attributes, 
+        build_speechlet_response(
+            card_title, speech_output, reprompt_text, should_end_session)
+    )
 
 
 def error_response():
